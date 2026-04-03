@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -54,7 +55,8 @@ public final class ChzzkAuthorizer
 
                 if (code != null && state.equals(receivedState))
                 {
-                    String response = "인증 성공!";
+                    String response = "인증 성공! 이제 이 창을 닫으셔도 됩니다.";
+                    exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
                     exchange.sendResponseHeaders(200, response.getBytes().length);
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.getResponseBody().close();
@@ -85,15 +87,20 @@ public final class ChzzkAuthorizer
     private void exchangeCodeForToken(String clientId, String clientSecret, String code, String state, CompletableFuture<ChzzkToken> future)
     {
         HttpClient client = HttpClient.newHttpClient();
-        String form = String.format(
-                "grantType=authorization_code&clientId=%s&clientSecret=%s&code=%s&state=%s",
-                clientId, clientSecret, code, state
-        );
+        String jsonBody = """
+                {
+                    "grantType": "authorization_code",
+                    "clientId": "%s",
+                    "clientSecret": "%s",
+                    "state": "%s",
+                    "code": "%s"
+                }
+                """.formatted(clientId, clientSecret, state, code);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(CHZZK_API_URL + "/auth/v1/token"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(form))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
                 .build();
 
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
@@ -118,6 +125,50 @@ public final class ChzzkAuthorizer
                 });
 
     }
+
+    public CompletableFuture<ChzzkToken> refreshToken(String refreshToken)
+    {
+        CompletableFuture<ChzzkToken> future = new CompletableFuture<>();
+        HttpClient client = HttpClient.newHttpClient();
+        String jsonBody = """
+                {
+                    "grantType": "refresh_token",
+                    "refreshToken": "%s",
+                    "clientId": "%s",
+                    "clientSecret": "%s"
+                }
+                """.formatted(refreshToken, _clientID, _clientSecret);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(CHZZK_API_URL + "/auth/v1/token"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                .build();
+
+        client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenAccept(body ->
+                {
+                    if (!body.contains("accessToken") || !body.contains("refreshToken"))
+                    {
+                        future.completeExceptionally(new RuntimeException("Refresh Error: " + body));
+                        return;
+                    }
+
+                    String newAccessToken = body.split("\"accessToken\":\"")[1].split("\"")[0];
+                    String newRefreshToken = body.split("\"refreshToken\":\"")[1].split("\"")[0];
+
+                    future.complete(new ChzzkToken(this, newAccessToken, newRefreshToken));
+                })
+                .exceptionally(ex ->
+                {
+                    future.completeExceptionally(ex);
+                    return null;
+                });
+
+        return future;
+    }
+
 
     public void revokeToken(String token, String typeHint)
     {
