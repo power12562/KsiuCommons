@@ -2,6 +2,7 @@ package com.ksiu.commons.streamconnector.authorizer;
 
 import com.ksiu.commons.streamconnector.token.ChzzkToken;
 import com.sun.net.httpserver.HttpServer;
+import org.json.JSONObject;
 
 import java.awt.*;
 import java.net.InetSocketAddress;
@@ -12,9 +13,11 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public final class ChzzkAuthorizer
 {
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
     private final int _port;
     private final String _clientID;
     private final String _clientSecret;
@@ -39,6 +42,13 @@ public final class ChzzkAuthorizer
             HttpServer server = HttpServer.create(new InetSocketAddress(_port), 0);
             server.createContext("/", exchange ->
             {
+                String path = exchange.getRequestURI().getPath();
+                if (path.endsWith("favicon.ico"))
+                {
+                    exchange.close();
+                    return;
+                }
+
                 String query = exchange.getRequestURI().getQuery();
                 String code = null;
                 String receivedState = null;
@@ -60,15 +70,18 @@ public final class ChzzkAuthorizer
                     exchange.sendResponseHeaders(200, response.getBytes().length);
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.getResponseBody().close();
-
                     exchangeCodeForToken(_clientID, _clientSecret, code, state, future);
-                    server.stop(0); // 작업 완료 후 서버 종료
+                    exchange.close();
                 }
                 else
                 {
                     future.completeExceptionally(new RuntimeException("Invalid Auth State or Code"));
-                    server.stop(0);
+                    exchange.close();
                 }
+            });
+            future.whenComplete((res, ex) ->
+            {
+                server.stop(0);
             });
             server.start();
             String authUrl = String.format(
@@ -81,12 +94,11 @@ public final class ChzzkAuthorizer
         {
             future.completeExceptionally(e);
         }
-        return future;
+        return future.orTimeout(5, TimeUnit.MINUTES);
     }
 
     private void exchangeCodeForToken(String clientId, String clientSecret, String code, String state, CompletableFuture<ChzzkToken> future)
     {
-        HttpClient client = HttpClient.newHttpClient();
         String jsonBody = """
                 {
                     "grantType": "authorization_code",
@@ -97,39 +109,67 @@ public final class ChzzkAuthorizer
                 }
                 """.formatted(clientId, clientSecret, state, code);
 
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest requestToken = HttpRequest.newBuilder()
                 .uri(URI.create(CHZZK_API_URL + "/auth/v1/token"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
                 .build();
 
-        client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        httpClient.sendAsync(requestToken, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
-                .thenAccept(body ->
+                .thenAccept(tokenBodyRaw ->
                 {
-                    if (!body.contains("accessToken") || !body.contains("refreshToken"))
+                    try
                     {
-                        future.completeExceptionally(new RuntimeException("API Error: " + body));
-                        return;
-                    }
+                        final JSONObject tokenBody = new JSONObject(tokenBodyRaw);
+                        final JSONObject tokenContent = tokenBody.getJSONObject("content");
+                        final String accessToken = tokenContent.getString("accessToken");
+                        final String refreshToken = tokenContent.getString("refreshToken");
+                        // User 조회
+                        HttpRequest requestUser = HttpRequest.newBuilder()
+                                .uri(URI.create(CHZZK_API_URL + "/open/v1/users/me"))
+                                .header("Authorization", "Bearer " + accessToken)
+                                .header("Content-Type", "application/json")
+                                .GET()
+                                .build();
 
-                    String accessToken = body.split("\"accessToken\":\"")[1].split("\"")[0];
-                    String refreshToken = body.split("\"refreshToken\":\"")[1].split("\"")[0];
-                    ChzzkToken token = new ChzzkToken(this, accessToken, refreshToken);
-                    future.complete(token);
+                        httpClient.sendAsync(requestUser, HttpResponse.BodyHandlers.ofString())
+                                .thenApply(HttpResponse::body)
+                                .thenAccept(userBodyRaw ->
+                                {
+                                    try
+                                    {
+                                        final JSONObject userBody = new JSONObject(userBodyRaw);
+                                        final JSONObject userContent = userBody.getJSONObject("content");
+                                        final String channelId = userContent.getString("channelId");
+                                        final String channelName = userContent.getString("channelName");
+                                        future.complete(new ChzzkToken(this, accessToken, refreshToken, channelId, channelName));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        future.completeExceptionally(new RuntimeException(userBodyRaw));
+                                    }
+                                }).exceptionally(ex ->
+                                {
+                                    future.completeExceptionally(ex);
+                                    return null;
+                                });
+                    }
+                    catch (Exception ex)
+                    {
+                        future.completeExceptionally(new RuntimeException(tokenBodyRaw));
+                    }
                 })
                 .exceptionally(ex ->
                 {
                     future.completeExceptionally(ex);
                     return null;
                 });
-
     }
 
-    public CompletableFuture<ChzzkToken> refreshToken(String refreshToken)
+    public CompletableFuture<ChzzkToken> refreshToken(ChzzkToken refreshToken)
     {
         CompletableFuture<ChzzkToken> future = new CompletableFuture<>();
-        HttpClient client = HttpClient.newHttpClient();
         String jsonBody = """
                 {
                     "grantType": "refresh_token",
@@ -137,7 +177,7 @@ public final class ChzzkAuthorizer
                     "clientId": "%s",
                     "clientSecret": "%s"
                 }
-                """.formatted(refreshToken, _clientID, _clientSecret);
+                """.formatted(refreshToken.getRefreshToken(), _clientID, _clientSecret);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(CHZZK_API_URL + "/auth/v1/token"))
@@ -145,20 +185,21 @@ public final class ChzzkAuthorizer
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
                 .build();
 
-        client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenAccept(body ->
                 {
-                    if (!body.contains("accessToken") || !body.contains("refreshToken"))
+                    try
                     {
-                        future.completeExceptionally(new RuntimeException("Refresh Error: " + body));
-                        return;
+                        JSONObject tokenBody = new JSONObject(body);
+                        final String newAccessToken = tokenBody.getString("accessToken");
+                        final String newRefreshToken = tokenBody.getString("refreshToken");
+                        future.complete(new ChzzkToken(this, newAccessToken, newRefreshToken, refreshToken.getChannelId(), refreshToken.getChannelName()));
                     }
-
-                    String newAccessToken = body.split("\"accessToken\":\"")[1].split("\"")[0];
-                    String newRefreshToken = body.split("\"refreshToken\":\"")[1].split("\"")[0];
-
-                    future.complete(new ChzzkToken(this, newAccessToken, newRefreshToken));
+                    catch (Exception ex)
+                    {
+                        future.completeExceptionally(ex);
+                    }
                 })
                 .exceptionally(ex ->
                 {
@@ -172,7 +213,6 @@ public final class ChzzkAuthorizer
 
     public void revokeToken(String token, String typeHint)
     {
-        HttpClient client = HttpClient.newHttpClient();
         String form = String.format(
                 "clientId=%s&clientSecret=%s&token=%s&tokenTypeHint=%s",
                 _clientID, _clientSecret, token, typeHint
@@ -184,7 +224,7 @@ public final class ChzzkAuthorizer
                 .POST(HttpRequest.BodyPublishers.ofString(form))
                 .build();
 
-        client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     }
 
 }
