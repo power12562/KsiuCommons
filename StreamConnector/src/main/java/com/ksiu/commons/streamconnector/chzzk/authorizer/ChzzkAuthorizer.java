@@ -1,6 +1,6 @@
-package com.ksiu.commons.streamconnector.authorizer;
+package com.ksiu.commons.streamconnector.chzzk.authorizer;
 
-import com.ksiu.commons.streamconnector.token.ChzzkToken;
+import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
 import com.sun.net.httpserver.HttpServer;
 import org.json.JSONObject;
 

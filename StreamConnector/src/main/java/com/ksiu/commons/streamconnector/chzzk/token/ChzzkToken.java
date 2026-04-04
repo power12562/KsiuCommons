@@ -1,7 +1,7 @@
-package com.ksiu.commons.streamconnector.token;
+package com.ksiu.commons.streamconnector.chzzk.token;
 
-import com.ksiu.commons.streamconnector.authorizer.ChzzkAuthorizer;
-import com.ksiu.commons.streamconnector.session.ChzzkSession;
+import com.ksiu.commons.streamconnector.chzzk.authorizer.ChzzkAuthorizer;
+import com.ksiu.commons.streamconnector.chzzk.session.ChzzkSession;
 
 public final class ChzzkToken
 {
