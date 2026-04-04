@@ -5,11 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e8b3171a-6a2c-4a64-914b-95053b8fee59" name="변경" comment="">
+      <change afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/session/interfaces/ISessionDisconnectEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/session/interfaces/ISessionSubscribeEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/session/interfaces/session/IChatEvent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/authorizer/ChzzkAuthorizer.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/authorizer/ChzzkAuthorizer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/ChzzkSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/ChzzkSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/ISystemEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/ISubscribeEvent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/token/ChzzkToken.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/token/ChzzkToken.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/authorizer/ChzzkAuthorizer.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/authorizer/ChzzkAuthorizer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/ChzzkSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/session/ChzzkSession.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/IChatEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/IConnectEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/IDisconnectEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/session/interfaces/ISubscribeEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/token/ChzzkToken.java" beforeDir="false" afterPath="$PROJECT_DIR$/StreamConnector/src/main/java/com/ksiu/commons/streamconnector/chzzk/token/ChzzkToken.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
