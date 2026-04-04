@@ -20,7 +20,7 @@ public final class ChzzkAuthorizer
     private final String _clientSecret;
     private final String _redirectUri;
 
-    private final String CHZZK_API_URL = "https://openapi.chzzk.naver.com";
+    public static final String CHZZK_API_URL = "https://openapi.chzzk.naver.com";
 
     public ChzzkAuthorizer(String clientId, String clientSecret, int port)
     {
