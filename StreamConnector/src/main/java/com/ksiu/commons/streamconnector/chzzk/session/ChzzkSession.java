@@ -68,6 +68,7 @@ public class ChzzkSession
         initChatEvent();
         initDonationEvent();
         initSubscriptionEvent();
+        setDisconnectEvent(null);
     }
 
     public boolean isConnect()
@@ -222,6 +223,9 @@ public class ChzzkSession
         _socket.on("disconnect", args ->
         {
             _isConnect = false;
+            for (String channelId : _subscribedChannels)
+                channelIdBySession.remove(channelId);
+
             if (onDisconnect != null)
             {
                 onDisconnect.execute();
