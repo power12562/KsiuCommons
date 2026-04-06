@@ -1,7 +1,11 @@
 package com.ksiu.commons.streamconnector.chzzk.session;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class ChzzkSessionManager
 {
@@ -19,11 +23,14 @@ public class ChzzkSessionManager
     {
         _clientId = clientId;
         _clientSecret = clientSecret;
+        expansionSessions(0);
     }
 
-    private final List<ChzzkSession> _sessions = new CopyOnWriteArrayList<>();
     private final String _clientId;
     private final String _clientSecret;
+    private final AtomicReferenceArray<ChzzkSession> _sessions = new AtomicReferenceArray<>(10);
+    private final Map<String, Integer> _channelIdBySessionsIndex = new ConcurrentHashMap<>();
+    private final Map<Integer, CompletableFuture<ChzzkSession>> _sessionsIndexBySessionFutures = new ConcurrentHashMap<>();
 
     public static void clear()
     {
@@ -32,11 +39,90 @@ public class ChzzkSessionManager
 
     private void internalClear()
     {
-        for (ChzzkSession session : _sessions)
+        int count = _channelIdBySessionsIndex.size();
+        if (count == 0)
+            return;
+
+        _channelIdBySessionsIndex.clear();
+        _sessionsIndexBySessionFutures.forEach((idx, future) ->
         {
-            session.disconnect();
+            future.cancel(true);
+        });
+        _sessionsIndexBySessionFutures.clear();
+
+        for (int i = 0; i < _sessions.length(); i++)
+        {
+            ChzzkSession session = _sessions.getAndSet(i, null);
+            if (session != null)
+            {
+                session.disconnect();
+            }
         }
-        _sessions.clear();
+    }
+
+    public static CompletableFuture<ChzzkSession> getSession(ChzzkToken token)
+    {
+        return instance.internalGetSession(token);
+    }
+
+    private CompletableFuture<ChzzkSession> internalGetSession(ChzzkToken token)
+    {
+        ChzzkSession findSession = ChzzkSession.getSessionByToken(token);
+        if (findSession != null)
+            return CompletableFuture.completedFuture(findSession);
+
+        final String channelId = token.getChannelId();
+        Integer sessionsIndex = _channelIdBySessionsIndex.get(channelId);
+        if (sessionsIndex != null)
+        {
+            CompletableFuture<ChzzkSession> sessionFuture = _sessionsIndexBySessionFutures.get(sessionsIndex);
+            if (sessionFuture != null)
+                return sessionFuture;
+
+            findSession = _sessions.get(sessionsIndex);
+            if (findSession != null)
+                return CompletableFuture.completedFuture(findSession);
+
+            return CompletableFuture.failedFuture(new RuntimeException("잘못된 Token 입니다."));
+        }
+
+        int tokenCount = _channelIdBySessionsIndex.size();
+        _channelIdBySessionsIndex.put(channelId, sessionsIndex);
+        sessionsIndex = tokenCount / 10;
+
+        if (tokenCount % 10 == 9)
+            expansionSessions(sessionsIndex + 1);
+
+        CompletableFuture<ChzzkSession> sessionFuture = _sessionsIndexBySessionFutures.get(sessionsIndex);
+        if (sessionFuture != null)
+            return sessionFuture;
+
+        findSession = _sessions.get(sessionsIndex);
+        if (findSession != null)
+            return CompletableFuture.completedFuture(findSession);
+
+        _channelIdBySessionsIndex.remove(channelId);
+        return CompletableFuture.failedFuture(new RuntimeException("더 이상 세션을 생성할 수 없습니다."));
+    }
+
+    private void expansionSessions(int newIndex)
+    {
+        if (newIndex > 10)
+            return;
+
+        CompletableFuture<ChzzkSession> newFuture = ChzzkSession.createSession(_clientId, _clientSecret)
+                .thenApply(session ->
+                {
+                    _sessions.set(newIndex, session);
+                    _sessionsIndexBySessionFutures.remove(newIndex);
+                    return session;
+                })
+                .exceptionally(throwable ->
+                {
+                    _sessionsIndexBySessionFutures.remove(newIndex);
+                    return null;
+                });
+        _sessionsIndexBySessionFutures.put(newIndex, newFuture);
     }
 
 }
