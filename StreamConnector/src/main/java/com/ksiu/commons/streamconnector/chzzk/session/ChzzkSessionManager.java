@@ -87,8 +87,8 @@ public class ChzzkSessionManager
         }
 
         int tokenCount = _channelIdBySessionsIndex.size();
-        _channelIdBySessionsIndex.put(channelId, sessionsIndex);
         sessionsIndex = tokenCount / 10;
+        _channelIdBySessionsIndex.put(channelId, sessionsIndex);
 
         if (tokenCount % 10 == 9)
             expansionSessions(sessionsIndex + 1);
