@@ -4,8 +4,10 @@ import com.ksiu.commons.streamconnector.chzzk.session.interfaces.ISessionSubscri
 import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
 
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class ChzzkSessionManager
@@ -32,6 +34,7 @@ public class ChzzkSessionManager
     private final AtomicReferenceArray<ChzzkSession> _sessions = new AtomicReferenceArray<>(10);
     private final Map<String, Integer> _channelIdBySessionsIndex = new ConcurrentHashMap<>();
     private final Map<Integer, CompletableFuture<ChzzkSession>> _sessionsIndexBySessionFutures = new ConcurrentHashMap<>();
+    private final Queue<Integer> _freeIndexQueue = new ConcurrentLinkedQueue<>();
     private ISessionSubscribeEvent _sessionSubscribeEvent;
     private ISessionSubscribeEvent _sessionUnsubscribeEvent;
     private ISessionSubscribeEvent _sessionRevokedSubscribeEvent;
@@ -48,6 +51,7 @@ public class ChzzkSessionManager
             return;
 
         _channelIdBySessionsIndex.clear();
+        _freeIndexQueue.clear();
         _sessionsIndexBySessionFutures.forEach((idx, future) ->
         {
             future.cancel(true);
@@ -61,6 +65,20 @@ public class ChzzkSessionManager
             {
                 session.disconnect();
             }
+        }
+    }
+
+    public static void remove(ChzzkToken token)
+    {
+        instance.internalRemove(token);
+    }
+
+    public void internalRemove(ChzzkToken token)
+    {
+        Integer index = _channelIdBySessionsIndex.remove(token.getChannelId());
+        if (index != null)
+        {
+            _freeIndexQueue.offer(index);
         }
     }
 
@@ -90,13 +108,20 @@ public class ChzzkSessionManager
             return CompletableFuture.failedFuture(new RuntimeException("잘못된 Token 입니다."));
         }
 
+        Integer reusableIndex = _freeIndexQueue.poll();
         int tokenCount = _channelIdBySessionsIndex.size();
-        sessionsIndex = tokenCount / 10;
+        if (reusableIndex != null)
+        {
+            sessionsIndex = reusableIndex;
+        }
+        else
+        {
+            sessionsIndex = tokenCount / 10;
+            if (tokenCount % 10 == 9)
+                expansionSessions(sessionsIndex + 1);
+
+        }
         _channelIdBySessionsIndex.put(channelId, sessionsIndex);
-
-        if (tokenCount % 10 == 9)
-            expansionSessions(sessionsIndex + 1);
-
         CompletableFuture<ChzzkSession> sessionFuture = _sessionsIndexBySessionFutures.get(sessionsIndex);
         if (sessionFuture != null)
             return sessionFuture;
