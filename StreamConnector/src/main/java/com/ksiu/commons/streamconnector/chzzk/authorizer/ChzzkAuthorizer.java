@@ -192,8 +192,9 @@ public final class ChzzkAuthorizer
                     try
                     {
                         JSONObject tokenBody = new JSONObject(body);
-                        final String newAccessToken = tokenBody.getString("accessToken");
-                        final String newRefreshToken = tokenBody.getString("refreshToken");
+                        final JSONObject userContent = tokenBody.getJSONObject("content");
+                        final String newAccessToken = userContent.getString("accessToken");
+                        final String newRefreshToken = userContent.getString("refreshToken");
                         future.complete(new ChzzkToken(this, newAccessToken, newRefreshToken, refreshToken.getChannelId(), refreshToken.getChannelName()));
                     }
                     catch (Exception ex)
