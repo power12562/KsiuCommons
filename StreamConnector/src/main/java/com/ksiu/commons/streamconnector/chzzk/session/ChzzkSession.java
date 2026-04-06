@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,6 +40,7 @@ public class ChzzkSession
     private ISessionSubscribeEvent _sessionSubscribeEvent;
     private ISessionSubscribeEvent _sessionUnsubscribeEvent;
     private ISessionSubscribeEvent _sessionRevokedSubscribeEvent;
+    private final Set<String> _subscribedChannels = ConcurrentHashMap.newKeySet();
     private final ConcurrentMap<String, IChatEvent> _channelIdByChatEvent = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, IDonationEvent> _channelIdByDonationEvent = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ISubscriptionEvent> _channelIdBySubscriptionEvent = new ConcurrentHashMap<>();
@@ -326,22 +328,38 @@ public class ChzzkSession
                 .build();
     }
 
-    private boolean cantSessionSubscribe(ChzzkToken token)
+    private static void postSessionEvent(ChzzkSession session, ChzzkToken token, String completeURI, ISessionEvent event, Consumer<Throwable> failCallback)
     {
         if (!token.IsValid())
         {
-            return true;
+            failCallback.accept(new RuntimeException("유효한 토큰이 아닙니다."));
+            return;
         }
+
         final String channelId = token.getChannelId();
         ChzzkSession originSession = channelIdBySession.get(channelId);
-        return originSession != null && originSession != this;
-    }
-
-    private static void postSessionEvent(ChzzkSession session, ChzzkToken token, String completeURI, ISessionEvent event, Consumer<Throwable> failCallback)
-    {
-        if (session.cantSessionSubscribe(token))
+        if (originSession != null && originSession != session)
         {
-            failCallback.accept(new RuntimeException("유효한 토큰이 아니거나, 다른 세션에 등록되어있는 토큰입니다."));
+            failCallback.accept(new RuntimeException("다른 세션에 등록되어있는 토큰입니다."));
+            return;
+        }
+
+        boolean isNotMaxSubscribed = false;
+        synchronized (session._subscribedChannels)
+        {
+            if (session._subscribedChannels.contains(channelId))
+            {
+                isNotMaxSubscribed = true;
+            }
+            else if (session._subscribedChannels.size() < MAX_EVENT_SIZE)
+            {
+                isNotMaxSubscribed = session._subscribedChannels.add(channelId);
+            }
+        }
+
+        if (!isNotMaxSubscribed)
+        {
+            failCallback.accept(new RuntimeException("구독을 더 이상 추가 할 수 없습니다."));
             return;
         }
 
@@ -355,7 +373,6 @@ public class ChzzkSession
                 return;
             }
 
-            final String channelId = token.getChannelId();
             if (channelId == null)
             {
                 failCallback.accept(new RuntimeException("유효하지 않는 채널 ID 입니다."));
@@ -464,6 +481,7 @@ public class ChzzkSession
         unsubscribeChatEvent(token);
         unsubscribeDonationEvent(token);
         unsubscribeSubscriptionEvent(token);
+        _subscribedChannels.remove(channelId);
         channelIdBySession.remove(channelId);
     }
 
