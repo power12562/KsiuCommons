@@ -1,5 +1,6 @@
 package com.ksiu.commons.streamconnector.chzzk.session;
 
+import com.ksiu.commons.streamconnector.chzzk.session.interfaces.ISessionSubscribeEvent;
 import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
 
 import java.util.Map;
@@ -31,6 +32,9 @@ public class ChzzkSessionManager
     private final AtomicReferenceArray<ChzzkSession> _sessions = new AtomicReferenceArray<>(10);
     private final Map<String, Integer> _channelIdBySessionsIndex = new ConcurrentHashMap<>();
     private final Map<Integer, CompletableFuture<ChzzkSession>> _sessionsIndexBySessionFutures = new ConcurrentHashMap<>();
+    private ISessionSubscribeEvent _sessionSubscribeEvent;
+    private ISessionSubscribeEvent _sessionUnsubscribeEvent;
+    private ISessionSubscribeEvent _sessionRevokedSubscribeEvent;
 
     public static void clear()
     {
@@ -115,6 +119,14 @@ public class ChzzkSessionManager
                 {
                     _sessions.set(newIndex, session);
                     _sessionsIndexBySessionFutures.remove(newIndex);
+
+                    if (_sessionSubscribeEvent != null)
+                        session.setSessionSubscribeEvent(_sessionSubscribeEvent);
+                    if (_sessionSubscribeEvent != null)
+                        session.setSessionUnsubscribeEvent(_sessionUnsubscribeEvent);
+                    if (_sessionSubscribeEvent != null)
+                        session.setSessionRevokedSubscribeEvent(_sessionRevokedSubscribeEvent);
+
                     return session;
                 })
                 .exceptionally(throwable ->
@@ -123,6 +135,21 @@ public class ChzzkSessionManager
                     return null;
                 });
         _sessionsIndexBySessionFutures.put(newIndex, newFuture);
+    }
+
+    public void setSessionSubscribeEvent(ISessionSubscribeEvent subscribeEvent)
+    {
+        this._sessionSubscribeEvent = subscribeEvent;
+    }
+
+    public void setSessionUnsubscribeEvent(ISessionSubscribeEvent unsubscribeEvent)
+    {
+        this._sessionUnsubscribeEvent = unsubscribeEvent;
+    }
+
+    public void setSessionRevokedSubscribeEvent(ISessionSubscribeEvent revokedEvent)
+    {
+        this._sessionRevokedSubscribeEvent = revokedEvent;
     }
 
 }
