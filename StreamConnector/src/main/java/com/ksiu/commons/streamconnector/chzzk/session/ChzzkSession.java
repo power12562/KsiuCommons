@@ -347,13 +347,9 @@ public class ChzzkSession
         boolean isNotMaxSubscribed = false;
         synchronized (session._subscribedChannels)
         {
-            if (session._subscribedChannels.contains(channelId))
+            if (session._subscribedChannels.contains(channelId) || session._subscribedChannels.size() < MAX_EVENT_SIZE)
             {
                 isNotMaxSubscribed = true;
-            }
-            else if (session._subscribedChannels.size() < MAX_EVENT_SIZE)
-            {
-                isNotMaxSubscribed = session._subscribedChannels.add(channelId);
             }
         }
 
@@ -417,17 +413,16 @@ public class ChzzkSession
                 }
             }
 
-            if (!isPut)
-            {
+            if (isPut)
+                session._subscribedChannels.add(channelId);
+            else
                 failCallback.accept(new RuntimeException("더 이상 구독할 수 없습니다."));
-            }
 
         }).exceptionally(throwable ->
         {
             failCallback.accept(throwable);
             return null;
         });
-
     }
 
     public void subscribeChatEvent(ChzzkToken token, IChatEvent chatEvent, Consumer<Throwable> failCallback)
