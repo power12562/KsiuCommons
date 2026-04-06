@@ -75,6 +75,9 @@ public class ChzzkSessionManager
 
     public void internalRemove(ChzzkToken token)
     {
+        if (token == null)
+            return;
+
         Integer index = _channelIdBySessionsIndex.remove(token.getChannelId());
         if (index != null)
         {
