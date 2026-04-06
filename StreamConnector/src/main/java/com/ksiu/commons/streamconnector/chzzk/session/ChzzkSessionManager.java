@@ -137,19 +137,19 @@ public class ChzzkSessionManager
         _sessionsIndexBySessionFutures.put(newIndex, newFuture);
     }
 
-    public void setSessionSubscribeEvent(ISessionSubscribeEvent subscribeEvent)
+    public static void setSessionSubscribeEvent(ISessionSubscribeEvent subscribeEvent)
     {
-        this._sessionSubscribeEvent = subscribeEvent;
+        instance._sessionSubscribeEvent = subscribeEvent;
     }
 
-    public void setSessionUnsubscribeEvent(ISessionSubscribeEvent unsubscribeEvent)
+    public static void setSessionUnsubscribeEvent(ISessionSubscribeEvent unsubscribeEvent)
     {
-        this._sessionUnsubscribeEvent = unsubscribeEvent;
+        instance._sessionUnsubscribeEvent = unsubscribeEvent;
     }
 
-    public void setSessionRevokedSubscribeEvent(ISessionSubscribeEvent revokedEvent)
+    public static void setSessionRevokedSubscribeEvent(ISessionSubscribeEvent revokedEvent)
     {
-        this._sessionRevokedSubscribeEvent = revokedEvent;
+        instance._sessionRevokedSubscribeEvent = revokedEvent;
     }
 
 }
