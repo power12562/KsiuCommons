@@ -51,8 +51,15 @@ public class ChzzkSession
             return null;
 
         if (args[0] instanceof String rawJson)
-            return new JSONObject(rawJson);
-
+            try
+            {
+                return new JSONObject(rawJson);
+            }
+            catch (JSONException e)
+            {
+                return null;
+            }
+        
         if (args[0] instanceof JSONObject json)
             return json;
 
@@ -385,11 +392,11 @@ public class ChzzkSession
                 synchronized (session._channelIdByChatEvent)
                 {
                     isPut = session._channelIdByChatEvent.size() < MAX_EVENT_SIZE || session._channelIdByChatEvent.containsKey(channelId);
-                }
-                if (isPut)
-                {
-                    channelIdBySession.put(channelId, session);
-                    session._channelIdByChatEvent.put(channelId, chatEvent);
+                    if (isPut)
+                    {
+                        channelIdBySession.put(channelId, session);
+                        session._channelIdByChatEvent.put(channelId, chatEvent);
+                    }
                 }
             }
             else if (event instanceof IDonationEvent donationEvent)
@@ -397,11 +404,11 @@ public class ChzzkSession
                 synchronized (session._channelIdByDonationEvent)
                 {
                     isPut = session._channelIdByDonationEvent.size() < MAX_EVENT_SIZE || session._channelIdByDonationEvent.containsKey(channelId);
-                }
-                if (isPut)
-                {
-                    channelIdBySession.put(channelId, session);
-                    session._channelIdByDonationEvent.put(channelId, donationEvent);
+                    if (isPut)
+                    {
+                        channelIdBySession.put(channelId, session);
+                        session._channelIdByDonationEvent.put(channelId, donationEvent);
+                    }
                 }
             }
             else if (event instanceof ISubscriptionEvent subscriptionEvent)
@@ -409,11 +416,11 @@ public class ChzzkSession
                 synchronized (session._channelIdBySubscriptionEvent)
                 {
                     isPut = session._channelIdBySubscriptionEvent.size() < MAX_EVENT_SIZE || session._channelIdBySubscriptionEvent.containsKey(channelId);
-                }
-                if (isPut)
-                {
-                    channelIdBySession.put(channelId, session);
-                    session._channelIdBySubscriptionEvent.put(channelId, subscriptionEvent);
+                    if (isPut)
+                    {
+                        channelIdBySession.put(channelId, session);
+                        session._channelIdBySubscriptionEvent.put(channelId, subscriptionEvent);
+                    }
                 }
             }
 
