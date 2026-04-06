@@ -122,9 +122,9 @@ public class ChzzkSessionManager
 
                     if (_sessionSubscribeEvent != null)
                         session.setSessionSubscribeEvent(_sessionSubscribeEvent);
-                    if (_sessionSubscribeEvent != null)
+                    if (_sessionUnsubscribeEvent != null)
                         session.setSessionUnsubscribeEvent(_sessionUnsubscribeEvent);
-                    if (_sessionSubscribeEvent != null)
+                    if (_sessionRevokedSubscribeEvent != null)
                         session.setSessionRevokedSubscribeEvent(_sessionRevokedSubscribeEvent);
 
                     return session;
