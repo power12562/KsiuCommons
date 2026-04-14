@@ -32,7 +32,7 @@ public final class SoopToken
         _FTK = channelJson.getString("FTK");
         _BNO = channelJson.getString("BNO");
         _CHIP = channelJson.getString("CHIP");
-        _CHPT = channelJson.getString("CHPT");
+        _CHPT = String.valueOf(Integer.parseInt(channelJson.getString("CHPT")) + 1);
         _CTIP = channelJson.getString("CTIP");
         _CTPT = channelJson.getString("CTPT");
         _GWIP = channelJson.getString("GWIP");
@@ -60,5 +60,15 @@ public final class SoopToken
     public String getBJNickname()
     {
         return _bjNickname;
+    }
+
+    public String getChatDomain()
+    {
+        return _chatDomain;
+    }
+
+    public Object getChatPort()
+    {
+        return _CHPT;
     }
 }

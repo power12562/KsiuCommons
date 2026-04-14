@@ -27,6 +27,7 @@ dependencies {
 
     implementation("io.socket:socket.io-client:1.0.2")
     implementation("org.json:json:20231013")
+    implementation("org.java-websocket:Java-WebSocket:1.6.0")
 }
 
 val mainPackage = "com.ksiu.commons"
@@ -39,6 +40,7 @@ tasks {
         relocate("org.json", "$mainPackage.shadow.org.json")
         relocate("okhttp3", "$mainPackage.shadow.okhttp3")
         relocate("okio", "$mainPackage.shadow.okio")
+        relocate("org.java_websocket", "$mainPackage.shadow.org.java_websocket")
     }
     jar {
         enabled = false
