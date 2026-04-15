@@ -59,7 +59,7 @@ public class ChzzkSession
             {
                 return null;
             }
-        
+
         if (args[0] instanceof JSONObject json)
             return json;
 
@@ -76,11 +76,6 @@ public class ChzzkSession
         initDonationEvent();
         initSubscriptionEvent();
         setDisconnectEvent(null);
-    }
-
-    public boolean isConnect()
-    {
-        return _isConnect;
     }
 
     private void initSystemEvent()

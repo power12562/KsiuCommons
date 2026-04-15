@@ -71,4 +71,9 @@ public final class SoopToken
     {
         return _CHPT;
     }
+
+    public String getChatNo()
+    {
+        return _chatNo;
+    }
 }

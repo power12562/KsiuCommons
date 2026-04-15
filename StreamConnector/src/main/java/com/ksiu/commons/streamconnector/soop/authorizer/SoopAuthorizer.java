@@ -54,7 +54,7 @@ public class SoopAuthorizer
                         }
                         catch (Exception e)
                         {
-                            future.completeExceptionally(new RuntimeException("토큰 생성 중 오류 발생: " + e.getMessage()));
+                            future.completeExceptionally(new RuntimeException("방송 상태를 확인해주세요."));
                         }
                     }
                     else
