@@ -20,12 +20,15 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SoopSession
 {
+    private static final Map<String, CompletableFuture<SoopSession>> bjIdBySessionFuture = new ConcurrentHashMap<>();
     private final SoopWebSocketClient _socket;
 
     private SoopSession(SoopWebSocketClient socket)
@@ -33,9 +36,32 @@ public class SoopSession
         _socket = socket;
     }
 
+    public static SoopSession getSessionByToken(SoopToken token)
+    {
+        CompletableFuture<SoopSession> future = bjIdBySessionFuture.get(token.getBjId());
+        try
+        {
+            return future.get();
+        }
+        catch (Exception ex)
+        {
+            return null;
+        }
+    }
+
     public static CompletableFuture<SoopSession> createSession(SoopToken token)
     {
-        final CompletableFuture<SoopSession> returnFuture = new CompletableFuture<>();
+        String bjId = token.getBjId();
+        CompletableFuture<SoopSession> returnFuture;
+        synchronized (bjIdBySessionFuture)
+        {
+            returnFuture = bjIdBySessionFuture.get(bjId);
+            if (returnFuture != null)
+                return returnFuture;
+
+            returnFuture = new CompletableFuture<>();
+            bjIdBySessionFuture.put(bjId, returnFuture);
+        }
         final SoopWebSocketClient socket = new SoopWebSocketClient(token, returnFuture);
         socket.connect();
         return returnFuture;
@@ -136,6 +162,7 @@ public class SoopSession
         @Override
         public void onOpen(ServerHandshake handshakedata)
         {
+            logger.info("[SoopSession] open");
             _isConnect.set(true);
             _pingThread = createPingThread();
             _pingThread.start();
@@ -247,6 +274,7 @@ public class SoopSession
         public void onClose(int code, String reason, boolean remote)
         {
             logger.info("[SoopSession] close");
+            bjIdBySessionFuture.remove(_token.getBjId());
             _isConnect.set(false);
             if (_pingThread != null)
             {
@@ -263,6 +291,8 @@ public class SoopSession
         @Override
         public void onError(Exception ex)
         {
+            logger.error("[SoopSession] error");
+            bjIdBySessionFuture.remove(_token.getBjId());
             if (_sessionFuture != null && !_sessionFuture.isDone())
             {
                 _sessionFuture.completeExceptionally(ex);

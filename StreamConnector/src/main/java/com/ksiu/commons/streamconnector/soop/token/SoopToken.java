@@ -1,5 +1,6 @@
 package com.ksiu.commons.streamconnector.soop.token;
 
+import com.ksiu.commons.streamconnector.soop.session.SoopSession;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,7 +21,6 @@ public final class SoopToken
     private final String _GWPT;
 
     private boolean _isValid;
-    private long _lastRenewedAt;
 
     public SoopToken(JSONObject channelJson) throws JSONException
     {
@@ -39,7 +39,6 @@ public final class SoopToken
         _GWPT = channelJson.getString("GWPT");
 
         _isValid = true;
-        _lastRenewedAt = System.currentTimeMillis();
     }
 
     public final boolean isValid()
@@ -50,6 +49,11 @@ public final class SoopToken
     public void revoke()
     {
         _isValid = false;
+        SoopSession session = SoopSession.getSessionByToken(this);
+        if (session != null)
+        {
+            session.disconnect();
+        }
     }
 
     public String getBjId()
@@ -67,7 +71,7 @@ public final class SoopToken
         return _chatDomain;
     }
 
-    public Object getChatPort()
+    public String getChatPort()
     {
         return _CHPT;
     }
