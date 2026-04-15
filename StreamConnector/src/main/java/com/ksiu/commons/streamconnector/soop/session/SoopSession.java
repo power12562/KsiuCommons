@@ -51,6 +51,11 @@ public class SoopSession
 
     public static CompletableFuture<SoopSession> createSession(SoopToken token)
     {
+        if (!token.isValid())
+        {
+            return CompletableFuture.failedFuture(new RuntimeException("유효하지 않는 토큰입니다."));
+        }
+
         String bjId = token.getBjId();
         CompletableFuture<SoopSession> returnFuture;
         synchronized (bjIdBySessionFuture)
