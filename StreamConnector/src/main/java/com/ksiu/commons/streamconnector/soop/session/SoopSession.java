@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.ksiu.commons.streamconnector.soop.session.interfaces.IDonationEvent;
+import com.ksiu.commons.streamconnector.soop.session.interfaces.ISessionDisconnectEvent;
 import com.ksiu.commons.streamconnector.soop.token.SoopToken;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_6455;
@@ -80,6 +81,11 @@ public class SoopSession
         }
     }
 
+    public void setDisconnectEvent(ISessionDisconnectEvent onDisconnect)
+    {
+        _socket.setDisconnectEvent(onDisconnect);
+    }
+
     public void subscribeDonationEven(IDonationEvent donationEvent)
     {
         _socket.setDonationEvent(donationEvent);
@@ -131,6 +137,7 @@ public class SoopSession
         private Thread _pingThread;
         private final Cache<String, String[]> _donationCache;
         private IDonationEvent _donationEvent;
+        private ISessionDisconnectEvent _onDisconnect;
 
         public SoopWebSocketClient(SoopToken token, CompletableFuture<SoopSession> sessionFuture)
         {
@@ -285,6 +292,10 @@ public class SoopSession
             {
                 _pingThread.interrupt();
             }
+            if (_onDisconnect != null)
+            {
+                _onDisconnect.execute();
+            }
 
             if (_sessionFuture != null && !_sessionFuture.isDone())
             {
@@ -296,7 +307,7 @@ public class SoopSession
         @Override
         public void onError(Exception ex)
         {
-            logger.error("[SoopSession] error");
+            logger.error("[SoopSession] error: {}", ex.getMessage());
             bjIdBySessionFuture.remove(_token.getBjId());
             if (_sessionFuture != null && !_sessionFuture.isDone())
             {
@@ -347,6 +358,11 @@ public class SoopSession
         public void setDonationEvent(IDonationEvent donationEvent)
         {
             _donationEvent = donationEvent;
+        }
+
+        public void setDisconnectEvent(ISessionDisconnectEvent onDisconnect)
+        {
+            _onDisconnect = onDisconnect;
         }
 
         private static class SoopTrustManager implements X509TrustManager
