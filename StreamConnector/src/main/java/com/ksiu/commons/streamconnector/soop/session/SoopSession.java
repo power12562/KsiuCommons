@@ -81,6 +81,11 @@ public class SoopSession
         }
     }
 
+    public SoopToken getToken()
+    {
+        return _socket.getToken();
+    }
+
     public void setDisconnectEvent(ISessionDisconnectEvent onDisconnect)
     {
         _socket.setDisconnectEvent(onDisconnect);
@@ -363,6 +368,11 @@ public class SoopSession
         public void setDisconnectEvent(ISessionDisconnectEvent onDisconnect)
         {
             _onDisconnect = onDisconnect;
+        }
+
+        public SoopToken getToken()
+        {
+            return _token;
         }
 
         private static class SoopTrustManager implements X509TrustManager
