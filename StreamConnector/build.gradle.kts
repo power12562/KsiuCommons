@@ -28,8 +28,8 @@ dependencies {
     implementation("io.socket:socket.io-client:1.0.2")
     implementation("org.json:json:20231013")
     implementation("org.java-websocket:Java-WebSocket:1.6.0")
-    implementation("org.slf4j:slf4j-simple:2.0.12")
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.3")
+    compileOnly("org.slf4j:slf4j-simple:2.0.12")
 }
 
 val mainPackage = "com.ksiu.commons"
@@ -38,13 +38,14 @@ tasks {
         useJUnitPlatform()
     }
     shadowJar {
+        mergeServiceFiles()
+
         relocate("io.socket", "$mainPackage.shadow.io.socket")
         relocate("org.json", "$mainPackage.shadow.org.json")
         relocate("okhttp3", "$mainPackage.shadow.okhttp3")
         relocate("okio", "$mainPackage.shadow.okio")
         relocate("org.java_websocket", "$mainPackage.shadow.org.java_websocket")
         relocate("com.github.benmanes.caffeine", "$mainPackage.shadow.caffeine")
-        relocate("org.slf4j", "$mainPackage.shadow.slf4j")
     }
     jar {
         enabled = false

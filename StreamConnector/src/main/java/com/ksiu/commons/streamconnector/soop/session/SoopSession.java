@@ -20,7 +20,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +28,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SoopSession
 {
+    private static Logger logger;
+
+    public static void SetDefaultLogger()
+    {
+        logger = LoggerFactory.getLogger(SoopWebSocketClient.class);
+    }
+
+    public static void SetLogger(Logger targetLogger)
+    {
+        logger = targetLogger;
+    }
+
     private static final Map<String, CompletableFuture<SoopSession>> bjIdBySessionFuture = new ConcurrentHashMap<>();
     private final SoopWebSocketClient _socket;
 
@@ -103,8 +114,6 @@ public class SoopSession
 
     private static class SoopWebSocketClient extends WebSocketClient
     {
-        private static final Logger logger = LoggerFactory.getLogger(SoopWebSocketClient.class);
-
         private static final Draft_6455 DRAFT_6455 = new Draft_6455();
         private static final String F = "\u000c";
         private static final String ESC = "\u001b\t";
@@ -239,7 +248,7 @@ public class SoopSession
             {
                 final String[] messageList = message.replace(ESC, "").split(F);
                 final String cmd = messageList[PACKET_INDEX_CMD].substring(0, 4);
-                logger.info("[SoopSession] cmd: {}", cmd);
+                // logger.info("[SoopSession] cmd: {}", cmd);
 
                 switch (cmd)
                 {
@@ -253,13 +262,13 @@ public class SoopSession
 
                 if (cmd.equals(COMMAND_DONE))
                 {
-                    logger.info("[SoopSession] donation: {}", Arrays.toString(messageList));
+                    // logger.info("[SoopSession] donation: {}", Arrays.toString(messageList));
                     String nickName = messageList[DONE_INDEX_NICKNAME];
                     _donationCache.put(nickName, messageList);
                 }
                 else if (cmd.equals(COMMAND_CHAT))
                 {
-                    logger.info("[SoopSession] chat: {}", Arrays.toString(messageList));
+                    // logger.info("[SoopSession] chat: {}", Arrays.toString(messageList));
                     // 채팅 패킷 : [cmd, msg, ?, ?, ?, ?, nickName, ?, ?, ?, ?, ?, ?, ?, ?]
                     String nickName = messageList[6]; // 닉네임
                     String[] doneMessage = _donationCache.getIfPresent(nickName);
