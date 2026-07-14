@@ -5,7 +5,7 @@ plugins {
 group =
     "com.ksiu"
 version =
-    "1.0-SNAPSHOT"
+    "1.1"
 
 repositories {
     mavenCentral()

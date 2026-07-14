@@ -6,18 +6,10 @@ public class PluginMessageBuilder
 {
     private final StringBuilder builder = new StringBuilder();
 
-    public PluginMessageBuilder add(String message, String... args)
+    public PluginMessageBuilder add(String... args)
     {
-        builder.append(message);
-
-        for (String arg : args)
-        {
-            builder.append(' ')
-                    .append(arg);
-        }
-
+        builder.append(String.join(" ", args));
         builder.append('\n');
-
         return this;
     }
 
